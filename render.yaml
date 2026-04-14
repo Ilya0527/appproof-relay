@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: appproof-relay
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: 10000
