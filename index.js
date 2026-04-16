@@ -108,12 +108,12 @@ wss.on("connection", (ws, req) => {
   // Notify others
   broadcast(room, ws, JSON.stringify({ type: "peer_joined", role, deviceId }));
 
-  // Forward messages
+  // Forward messages - always as string (not Buffer) for cross-platform compat
   ws.on("message", (data) => {
     room.lastActivity = Date.now();
-    const msg = data.toString().substring(0, 80);
-    console.log(`[${code}] ${role} → broadcast: ${msg}`);
-    broadcast(room, ws, data);
+    const str = data.toString();
+    console.log(`[${code}] ${role} → broadcast: ${str.substring(0, 80)}`);
+    broadcast(room, ws, str);
   });
 
   ws.on("close", () => {
