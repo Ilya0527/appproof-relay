@@ -93,8 +93,14 @@ wss.on("connection", (ws, req) => {
     room.controller = ws;
     console.log(`[${code}] Controller joined`);
   } else {
+    // Close old agent connection with same deviceId
+    const existing = room.agents.get(deviceId);
+    if (existing && existing.readyState === WebSocket.OPEN) {
+      existing.close(4001, "Replaced by new connection");
+      console.log(`[${code}] Agent replaced: ${deviceId}`);
+    }
     room.agents.set(deviceId, ws);
-    console.log(`[${code}] Agent joined: ${deviceId}`);
+    console.log(`[${code}] Agent joined: ${deviceId} (total: ${room.agents.size})`);
   }
 
   room.lastActivity = Date.now();
@@ -130,12 +136,17 @@ wss.on("connection", (ws, req) => {
 
 function broadcast(room, sender, data) {
   let sent = 0;
-  const send = (ws, label) => {
+  const dead = [];
+  const send = (ws) => {
     if (ws && ws !== sender && ws.readyState === WebSocket.OPEN) { ws.send(data); sent++; }
   };
-  send(room.controller, "controller");
-  for (const [id, ws] of room.agents) send(ws, `agent:${id}`);
-  if (sent === 0) console.log(`[broadcast] WARNING: 0 recipients! agents=${room.agents.size} hasCtrl=${!!room.controller}`);
+  send(room.controller);
+  for (const [id, ws] of room.agents) {
+    if (ws.readyState !== WebSocket.OPEN) { dead.push(id); continue; }
+    send(ws);
+  }
+  // Clean dead agents
+  for (const id of dead) { room.agents.delete(id); console.log(`[cleanup] Removed dead agent: ${id}`); }
 }
 
 // Cleanup stale rooms every 10 minutes
