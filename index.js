@@ -105,6 +105,8 @@ wss.on("connection", (ws, req) => {
   // Forward messages
   ws.on("message", (data) => {
     room.lastActivity = Date.now();
+    const msg = data.toString().substring(0, 80);
+    console.log(`[${code}] ${role} → broadcast: ${msg}`);
     broadcast(room, ws, data);
   });
 
@@ -127,11 +129,13 @@ wss.on("connection", (ws, req) => {
 });
 
 function broadcast(room, sender, data) {
-  const send = (ws) => {
-    if (ws && ws !== sender && ws.readyState === WebSocket.OPEN) ws.send(data);
+  let sent = 0;
+  const send = (ws, label) => {
+    if (ws && ws !== sender && ws.readyState === WebSocket.OPEN) { ws.send(data); sent++; }
   };
-  send(room.controller);
-  for (const ws of room.agents.values()) send(ws);
+  send(room.controller, "controller");
+  for (const [id, ws] of room.agents) send(ws, `agent:${id}`);
+  if (sent === 0) console.log(`[broadcast] WARNING: 0 recipients! agents=${room.agents.size} hasCtrl=${!!room.controller}`);
 }
 
 // Cleanup stale rooms every 10 minutes
