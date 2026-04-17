@@ -93,12 +93,8 @@ wss.on("connection", (ws, req) => {
     room.controller = ws;
     console.log(`[${code}] Controller joined`);
   } else {
-    // Close old agent connection with same deviceId
-    const existing = room.agents.get(deviceId);
-    if (existing && existing.readyState === WebSocket.OPEN) {
-      existing.close(4001, "Replaced by new connection");
-      console.log(`[${code}] Agent replaced: ${deviceId}`);
-    }
+    // Just replace in map - let old connection die naturally on its own
+    // (don't force-close, it causes reconnect loops)
     room.agents.set(deviceId, ws);
     console.log(`[${code}] Agent joined: ${deviceId} (total: ${room.agents.size})`);
   }
